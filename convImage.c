@@ -9,6 +9,9 @@
 int main(void) {
   int width, height, channels;
   unsigned char *img = stbi_load("img/image.png", &width, &height, &channels, 0);
+  //int mask[9] = {-1, -1, -1, -1, 8, -1, -1, -1, -1};
+  int mask[9] = {0, -1, 0, -1, 4, -1, 0, -1, 0};
+
   
   if(img == NULL) {
     printf("Error loading the image\n");
@@ -35,7 +38,54 @@ int main(void) {
     }
   }
 
+  size_t result_img_size = width * height * gray_channels;
+  unsigned char *result_img = malloc(result_img_size);
+
+  // Applies the convolution to the image
+  int index = 0;
+  for(unsigned char *p = gray_img, *pr = result_img; p != gray_img + gray_img_size; p += gray_channels, pr += gray_channels) {
+    size_t y = index / height;
+    size_t x = index % width;
+    uint8_t acc = 0;
+
+    for(size_t i = 0; i < sizeof mask; i++) {
+      int mask_dim = sqrt(sizeof mask);
+
+      if (x == 0 && y == 0) {
+        
+      } else if (x == 0 && y == height - 1) {
+        
+      } else if (x == width - 1 && y == 0) {
+
+      } else if (x == width - 1 && y == height - 1) {
+
+      } else if (x == 0) {
+
+      } else if (y == 0) {
+
+      } else if (x == width - 1) {
+
+      } else if (y == height - 1) {
+        
+      } else {
+        size_t dy = (i / mask_dim) - (((mask_dim / 2) - 1) + (mask_dim % 2));
+        size_t dx = (i % mask_dim) - (((mask_dim / 2) - 1) + (mask_dim % 2));
+        //printf("DY: %ld\n", dy);
+        //printf("DX: %ld\n", dx);
+        //printf("Pizel: %d\n", (uint8_t)(*p + dx + (dy * width)));
+        //printf("Mask[i]: %d\n", mask[i]);
+
+        acc += (uint8_t)(*p + dx + (dy * width)) * mask[i];
+      }
+    }
+    *pr = acc;
+    acc = 0;
+    index++;
+  }
+
   // Save image and free memory space
   stbi_write_jpg("img/gray.jpg", width, height, gray_channels, gray_img, 100);
   stbi_image_free(img);
+
+  stbi_write_jpg("img/result.jpg", width, height, gray_channels, result_img, 100);
 }
