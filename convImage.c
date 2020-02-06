@@ -9,9 +9,10 @@
 int main(void) {
   int width, height, channels;
   unsigned char *img = stbi_load("img/image.png", &width, &height, &channels, 0);
-  //int mask[9] = {-1, -1, -1, -1, 8, -1, -1, -1, -1};
-  int mask[9] = {0, -1, 0, -1, 4, -1, 0, -1, 0};
-
+  //int mask[9] = {0, 1, 0, 1, -4, 1, 0, 1, 0};
+  //int mask[9] = {0, -1, 0, -1, 4, -1, 0, -1, 0};
+  int size_mask = 9;
+  int mask[9] = {-1, -1, -1, -1, 8, -1, -1, -1, -1};
   
   if(img == NULL) {
     printf("Error loading the image\n");
@@ -46,10 +47,10 @@ int main(void) {
   for(unsigned char *p = gray_img, *pr = result_img; p != gray_img + gray_img_size; p += gray_channels, pr += gray_channels) {
     size_t y = index / height;
     size_t x = index % width;
-    uint8_t acc = 0;
+    int acc = 0;
 
-    for(size_t i = 0; i < sizeof mask; i++) {
-      int mask_dim = sqrt(sizeof mask);
+    for(int i = 0; i < size_mask; i++) {
+      int mask_dim = sqrt(size_mask);
 
       if (x == 0 && y == 0) {
         
@@ -70,15 +71,21 @@ int main(void) {
       } else {
         size_t dy = (i / mask_dim) - (((mask_dim / 2) - 1) + (mask_dim % 2));
         size_t dx = (i % mask_dim) - (((mask_dim / 2) - 1) + (mask_dim % 2));
-        //printf("DY: %ld\n", dy);
-        //printf("DX: %ld\n", dx);
-        //printf("Pizel: %d\n", (uint8_t)(*p + dx + (dy * width)));
-        //printf("Mask[i]: %d\n", mask[i]);
 
-        acc += (uint8_t)(*p + dx + (dy * width)) * mask[i];
+        uint32_t value = ((uint32_t) *(p + dx + (dy * width))) * mask[i];
+
+        acc += value;
       }
     }
-    *pr = acc;
+
+    if(acc < 0) {
+      acc = 0;
+    }
+    else if(acc > 255){
+      acc = 255;
+    }
+
+    *pr = (unsigned char) acc;
     acc = 0;
     index++;
   }
