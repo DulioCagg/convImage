@@ -1,1 +1,1 @@
-gcc convImage.c -o convImage -lm
+gcc *.c -o convImage -lm
