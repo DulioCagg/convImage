@@ -1,7 +1,7 @@
 #include "convImage.h"
 
 int main(void) {
-  convImage("imageSmall.png", "resultSmall.jpg");
-  convImage("imageNormal.png", "resultNormal.jpg");
-  convImage("imageBig.png", "resultBig.jpg");
+  convImage("imageSmall.jpg", "resultSmall.jpg");
+  convImage("imageNormal.jpg", "resultNormal.jpg");
+  convImage("imageBig.jpg", "resultBig.jpg");
 }
