@@ -8,7 +8,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image/stb_image_write.h"
 
-// Applies the convolution to the path image and saves the resulting image
+// Transforms the image to gray-scale, applies the designated mask and saves the resulting image 
 void convImage(char *original, char *res) {
   char imagePath[100] = "img/originals/";
   char resultPath[100] = "img/results/";
@@ -30,9 +30,9 @@ void convImage(char *original, char *res) {
   // Convert the image to gray-scale, if the image contains a transparency value, it has 2 channels
   size_t img_size = width * height * channels;
   size_t gray_img_size, gray_channels;
-
   unsigned char* gray_img = imageToGrayscale(img, width, height, channels, &gray_img_size, &gray_channels);
 
+  // Takes the time it takes to apply the mask to the image
   clock_t start = clock(); 
   unsigned char* result_img = applyMask(gray_img, width, height, gray_channels, mask, size_mask);
   clock_t elapsed = clock() - start;
@@ -47,12 +47,33 @@ void convImage(char *original, char *res) {
   stbi_image_free(result_img);
 }
 
-unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_height, size_t input_channels, int* mask, size_t mask_size) {
-  
-  unsigned char *output = newImage(input_width, input_height, input_channels);
 
+// Transforms an image to gray-scale taking the mean between the values of the RGB values
+unsigned char* imageToGrayscale(unsigned char* input, size_t input_width, size_t input_height, size_t input_channels, size_t* output_size, size_t* output_channels) {
   size_t input_size = input_width * input_height * input_channels;
-    int index = 0;
+  // Convert the image to gray-scale, if the image contains a transparency value, it has 2 channels
+  int grey_channels = input_channels == 4 ? 2 : 1;
+  size_t grey_img_size = input_width * input_height * grey_channels;
+  unsigned char *gray_img = newImage(input_width, input_height, grey_channels);
+
+  // P for original, PG for new gray image
+  for (unsigned char *p = input, *pg = gray_img; p != input + input_size; p += input_channels, pg += grey_channels) {
+    *pg = (uint8_t)((*p + *(p + 1) + *(p + 2)) / 3.0);
+    if (input_channels == 4) { *(pg + 1) = *(p + 3); }
+  }
+
+  *output_size = grey_img_size;
+  *output_channels = grey_channels;
+
+  return gray_img;
+}
+
+// Applies the convolution to the image 
+unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_height, size_t input_channels, int* mask, size_t mask_size) {
+  unsigned char *output = newImage(input_width, input_height, input_channels);
+  size_t input_size = input_width * input_height * input_channels;
+
+  int index = 0;
   for(unsigned char *p = input, *pr = output; p != input + input_size; p += input_channels, pr += input_channels) {
     size_t y = index / input_height;
     size_t x = index % input_width;
@@ -87,6 +108,7 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
       }
     }
 
+    // Delimits the value for the pixel to black or white for edge detection
     if(acc < 0) {
       acc = 0;
     }
@@ -99,26 +121,8 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
   return output;
 }
 
-unsigned char* imageToGrayscale(unsigned char* input, size_t input_width, size_t input_height, size_t input_channels, size_t* output_size, size_t* output_channels) {
-  size_t input_size = input_width * input_height * input_channels;
-  // Convert the image to gray-scale, if the image contains a transparency value, it has 2 channels
-  int grey_channels = input_channels == 4 ? 2 : 1;
-  size_t grey_img_size = input_width * input_height * grey_channels;
-  unsigned char *gray_img = newImage(input_width, input_height, grey_channels);
 
-  // P for original, PG for new gray image
-  for (unsigned char *p = input, *pg = gray_img; p != input + input_size; p += input_channels, pg += grey_channels) {
-    *pg = (uint8_t)((*p + *(p + 1) + *(p + 2)) / 3.0);
-    if (input_channels == 4) { *(pg + 1) = *(p + 3); }
-  }
-
-  *output_size = grey_img_size;
-  *output_channels = grey_channels;
-
-  return gray_img;
-}
-
-
+// Allocates the space in memory and returns the pointer of that space
 unsigned char* newImage(size_t input_width, size_t input_height, size_t input_channels) {
 
     size_t output_size = input_width * input_height * input_channels;
