@@ -22,14 +22,15 @@ int main(int argc, char** argv) {
 
     char inputPath[100]  = ""; // "img/originals/imageSmall.jpg";
     char resultPath[100] = ""; // "img/results/Sequential/resultsSmall.jpg";
-
+    int threadCount = 0;
 
     // Argument Parsing
-    if (argc > 2) {
+    if (argc > 3) {
+        if (argc > 3) threadCount = atoi(argv[3]);
         if (argc > 2) strcpy(resultPath, argv[2]);   // resultPath = *argv[2];
         if (argc > 1) strcpy(inputPath, argv[1]);   // inputPath = *argv[1];
 
-    } else printf("Image Convolution in C\n\tArguments:\n\t\tinputPath outputPath\n");
+    } else printf("Image Convolution in C\n\tArguments:\n\t\tinputPath outputPath threadCount\n");
 
     
     // Load the input image
@@ -48,7 +49,7 @@ int main(int argc, char** argv) {
 
     // Takes the time it takes to apply the mask to the image
     clock_t startTime = clock();
-    unsigned char* result_img = applyMask(gray_img, width, height, gray_channels, mask, size_mask);
+    unsigned char* result_img = applyMask(gray_img, width, height, gray_channels, mask, size_mask, threadCount);
     clock_t elapsedTime = clock() - startTime;
 
     // Calculate time taken and output
