@@ -60,15 +60,21 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
     omp_set_num_threads(threadCount);
 
     int index = 0;
-    for (unsigned char *p = input, *pr = output; p != input + input_size; p += input_channels, pr += input_channels) {
+
+// shared(result)
+// pragma omp parallel for num_threads(threadCount)
+// for loop need to be in a i=0, i<X, i++ format
+#pragma omp parallel for
+    for (unsigned char *p = input; p != input + input_size; p += input_channels) {
+        unsigned char *pr = output;
+        pr += input_channels;
+
         size_t y   = index / input_height;
         size_t x   = index % input_width;
         int    acc = 0;
 
 
-#pragma omp parallel
-{
-#pragma omp parallel for
+
         for (int i = 0; i < mask_size; i++) {
             int mask_dim = sqrt(mask_size);
 
@@ -97,8 +103,7 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
                 acc += value;
             }
         }
-#pragma omp barrier
-}
+
         // Delimits the value for the pixel to black or white for edge detection
         if (acc < 0) {
             acc = 0;
