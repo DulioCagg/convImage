@@ -47,14 +47,14 @@ int main(int argc, char** argv) {
     unsigned char* gray_img = imageToGrayscale(img, width, height, channels, &gray_img_size, &gray_channels);
 
     // Takes the time it takes to apply the mask to the image
-    clock_t startTime = clock();
+    // clock_t startTime = clock();
     unsigned char* result_img = applyMask(gray_img, width, height, gray_channels, mask, size_mask);
-    clock_t elapsedTime = clock() - startTime;
+    // clock_t elapsedTime = clock() - startTime;
 
     // Calculate time taken and output
-    double seconds = ( (double) elapsedTime ) / CLOCKS_PER_SEC;
+    // double seconds = ( (double) elapsedTime ) / CLOCKS_PER_SEC;
     //printf("Convolution for %s took: %.3f seconds.\n", inputPath, seconds);
-    printf("%.4f", seconds);
+    // printf("%.4f", seconds);
 
     // Save image and free memory space
     stbi_image_free(img);
