@@ -121,8 +121,7 @@ void convImage(char* original, char* res) {
 
     unsigned char* gray = stbi_load(imagePath, &g_width, &g_height, &g_channels, 1);
     printf("Value of channels: %d", channels);
-    stbi_write_jpg("./Hello.jpg", width, height, 1, gray, 100);
-
+    
     // Declares the Kernel for the convolution with its size
     int size_mask = 9;
     int mask[9]   = { -1, -1, -1, -1, 8, -1, -1, -1, -1 };

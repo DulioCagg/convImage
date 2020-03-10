@@ -48,15 +48,9 @@ int main(int argc, char** argv) {
     unsigned char* gray_img = imageToGrayscale(img, width, height, channels, &gray_img_size, &gray_channels);
 
     // Takes the time it takes to apply the mask to the image
-<<<<<<< HEAD
     // clock_t startTime = clock();
-    unsigned char* result_img = applyMask(gray_img, width, height, gray_channels, mask, size_mask);
+    unsigned char* result_img = applyMask(gray_img, width, height, gray_channels, mask, size_mask, 4);
     // clock_t elapsedTime = clock() - startTime;
-=======
-    clock_t startTime = clock();
-    unsigned char* result_img = applyMask(gray_img, width, height, gray_channels, mask, size_mask, threadCount);
-    clock_t elapsedTime = clock() - startTime;
->>>>>>> face5973ec1b24b58f7e9f36712d0e1149e00a97
 
     // Calculate time taken and output
     // double seconds = ( (double) elapsedTime ) / CLOCKS_PER_SEC;
