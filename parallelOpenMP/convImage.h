@@ -66,6 +66,6 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
             index++;
         }
     }
-    printf("With %d threads, it took: %.3f seconds\n", thread_count, omp_get_wtime() - start);
+    printf("%d threads: %.3f seconds\n", thread_count, omp_get_wtime() - start);
     return output;
 }
