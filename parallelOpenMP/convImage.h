@@ -8,8 +8,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../stb_image/stb_image_write.h"
 
-
-
 // Allocates the space in memory and returns the pointer of that space
 unsigned char* newImage(size_t input_width, size_t input_height, size_t input_channels) {
 
@@ -23,33 +21,6 @@ unsigned char* newImage(size_t input_width, size_t input_height, size_t input_ch
     }
 
     return output_img;
-}
-
-// Transforms an image to gray-scale taking the mean between the values of the RGB values
-unsigned char* imageToGrayscale(unsigned char* input,
-                 size_t         input_width,
-                 size_t         input_height,
-                 size_t         input_channels,
-                 size_t*        output_size,
-                 size_t*        output_channels) {
-    size_t input_size = input_width * input_height * input_channels;
-    // Convert the image to gray-scale, if the image contains a transparency value, it has 2 channels
-    int            grey_channels = input_channels == 4 ? 2 : 1;
-    size_t         grey_img_size = input_width * input_height * grey_channels;
-    unsigned char* gray_img      = newImage(input_width, input_height, grey_channels);
-
-    // P for original, PG for new gray image
-    for (unsigned char *p = input, *pg = gray_img; p != input + input_size; p += input_channels, pg += grey_channels) {
-        *pg = (uint8_t)((*p + *(p + 1) + *(p + 2)) / 3.0);
-        if (input_channels == 4) {
-            *(pg + 1) = *(p + 3);
-        }
-    }
-
-    *output_size     = grey_img_size;
-    *output_channels = grey_channels;
-
-    return gray_img;
 }
 
 // Applies the convolution to the image
@@ -67,7 +38,6 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
             size_t x   = index % input_width;
             int    acc = 0;
 
-            // #pragma omp for
             for (int i = 0; i < mask_size; i++) {
                 int mask_dim = sqrt(mask_size);
 
@@ -96,60 +66,6 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
             index++;
         }
     }
-
-        
-    // #pragma omp parallel for shared(input, output) 
-        // for (int k = 0; k < input_size; k++) {
-    // #pragma omp barrier
-    printf("Took: %.3f seconds\n", omp_get_wtime() - start);
-
-
+    printf("With %d threads, it took: %.3f seconds\n", thread_count, omp_get_wtime() - start);
     return output;
-}
-
-// Transforms the image to gray-scale, applies the designated mask and saves the resulting image
-void convImage(char* original, char* res) {
-    char imagePath[100]  = "img/originals/";
-    char resultPath[100] = "img/results/";
-    strcat(imagePath, original);
-    strcat(resultPath, res);
-
-    int            width, height, channels;
-    int            g_width, g_height, g_channels;
-    unsigned char* img = stbi_load(imagePath, &width, &height, &channels, 0);
-
-
-    unsigned char* gray = stbi_load(imagePath, &g_width, &g_height, &g_channels, 1);
-    printf("Value of channels: %d", channels);
-    
-    // Declares the Kernel for the convolution with its size
-    int size_mask = 9;
-    int mask[9]   = { -1, -1, -1, -1, 8, -1, -1, -1, -1 };
-
-    if (img == NULL) {
-        printf("Error loading the image\n");
-        exit(1);
-    }
-
-    // New code for one channel image
-    size_t new_img_size = width * height;
-
-    // Convert the image to gray-scale, if the image contains a transparency value, it has 2 channels
-    size_t         img_size = width * height * channels;
-    size_t         gray_img_size, gray_channels;
-    unsigned char* gray_img = imageToGrayscale(gray, width, height, channels, &gray_img_size, &gray_channels);
-
-    // Takes the time it takes to apply the mask to the image
-    clock_t        start      = clock();
-    unsigned char* result_img = applyMask(gray_img, width, height, 1, mask, size_mask, 4);
-    clock_t        elapsed    = clock() - start;
-
-    double seconds = ((double)elapsed) / CLOCKS_PER_SEC;
-    printf("Convolution for %s took: %.3f seconds.\n", original, seconds);
-
-    // Save image and free memory space
-    stbi_image_free(img);
-    stbi_image_free(gray_img);
-    stbi_write_jpg(resultPath, width, height, gray_channels, result_img, 100);
-    stbi_image_free(result_img);
 }
