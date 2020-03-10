@@ -24,7 +24,7 @@ unsigned char* newImage(size_t input_width, size_t input_height, size_t input_ch
 }
 
 // Applies the convolution to the image
-unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_height, size_t input_channels, int* mask, size_t mask_size, int thread_count) {
+unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_height, size_t input_channels, int* mask, size_t mask_size, int thread_count, FILE* fp) {
     unsigned char* output     = newImage(input_width, input_height, input_channels);
     size_t         input_size = input_width * input_height * input_channels;
 
@@ -40,7 +40,6 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
 
             for (int i = 0; i < mask_size; i++) {
                 int mask_dim = sqrt(mask_size);
-
                 if (x == 0 && y == 0) {
                 } else if (x == 0 && y == input_height - 1) {
                 } else if (x == input_width - 1 && y == 0) {
@@ -66,6 +65,6 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
             index++;
         }
     }
-    printf("%d threads: %.3f seconds\n", thread_count, omp_get_wtime() - start);
+    fprintf(fp, "%d,%.3f\n", thread_count, omp_get_wtime() - start);
     return output;
 }
