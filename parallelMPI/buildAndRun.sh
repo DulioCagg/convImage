@@ -1,4 +1,4 @@
 #!/bin/bash
 
-./compile
-./run
+gcc main.c -o convImage -lm
+./convImage
