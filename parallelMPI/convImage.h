@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include <mpi.h>
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -58,12 +56,6 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
     unsigned char* output     = newImage(input_width, input_height, input_channels);
     size_t         input_size = input_width * input_height * input_channels;
 
-    int mpi_size, mpi_rank;
-
-    MPI_Init(argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-
     // MPI_Send( &buffer, count, datatype, destination, tag, comm)
     // MPI_Recv( &buffer, count, datatype, source, tag, comm, &status)
 
@@ -116,8 +108,6 @@ unsigned char* applyMask(unsigned char* input, size_t input_width, size_t input_
         *pr = (unsigned char)acc;
         index++;
     }
-
-    MPI_Finalize();
 
     return output;
 }

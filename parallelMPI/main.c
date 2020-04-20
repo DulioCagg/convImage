@@ -1,78 +1,207 @@
 #include "convImage.h"
+#include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
+MPI_Status status;
+unsigned char *img;
 
-// Declares the Kernel for the convolution with its size
-int size_mask = 9;
-int mask[9] = {-1, -1, -1, -1, 8, -1, -1, -1, -1};
+void rebuild_img(unsigned char *img, unsigned char *chunk, int from, int to)
+{
+    printf("Rebuild: from %d to %d\n", from, to);
+    for (int i = from, j = 0; i <= to; i++, j++)
+    {
+        img[i] = chunk[j];
+    }
+}
 
+int main(int argc, char *argv[])
+{
 
+    // Bs needed
+    int width, height, channels, rows;
+    int img_size;
 
-// argc = argument count, argv = pointer to charstring containing argument
-int main(int argc, char* argv[]) {
+    const char *pathImg = "img/originals/imageNormal.jpg";
+    const char *outputImg = "img/results/imageNormal.jpg";
 
-    char inputPath[3][100]; 
-    char resultPath[3][100];
+    // MPI Shit
+    int numtasks, taskid, numworkers, source, dest;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &taskid);
+    MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
-    size_t image_count = 3;
+    numworkers = numtasks - 1;
 
-    // Define image paths
-    strcpy(inputPath[0], "img/originals/imageSmall.jpg");
-    strcpy(resultPath[0], "img/results/MPI/imageSmall.jpg");
-    strcpy(inputPath[1], "img/originals/imageNormal.jpg");
-    strcpy(resultPath[1], "img/results/MPI/imageNormal.jpg");
-    strcpy(inputPath[2], "img/originals/imageBig.jpg");
-    strcpy(resultPath[2], "img/results/MPI/imageBig.jpg");
+    // MASTER!! ... MASTER!!
+    if (taskid == 0)
+    {
 
-
-    // // Argument Parsing
-    // if (argc > 2) {
-    //     if (argc > 2) strcpy(resultPath, argv[2]);   // resultPath = *argv[2];
-    //     if (argc > 1) strcpy(inputPath, argv[1]);   // inputPath = *argv[1];
-
-    // } else printf("Image Convolution in C\n\tArguments:\n\t\tinputPath outputPath\n");
-
-    // Apply convolution to each image
-    for (size_t image = 0; image < image_count; image++) {
-
-        // Load the input image
-        int width, height, channels;
-        const char *image_source = inputPath[image];
-        const char *output_location = resultPath[image];
-
-        unsigned char* img = stbi_load(image_source, &width, &height, &channels, 0);
-
-        if (img == NULL) {
+        unsigned char *pre_img = stbi_load(pathImg, &width, &height, &channels, 1);
+        if (pre_img == NULL)
+        {
             printf("Error loading the image\n");
             exit(1);
         }
-
-
         // Convert the image to gray-scale, if the image contains a transparency value, it has 2 channels
-        size_t         img_size = width * height * channels;
-        size_t         gray_img_size, gray_channels;
-        unsigned char* gray_img = imageToGrayscale(img, width, height, channels, &gray_img_size, &gray_channels);
+        img_size = width * height * channels;
+        img = (unsigned char *)malloc(img_size * sizeof(unsigned char));
+        strncpy(img, pre_img, img_size);
 
-        // Takes the time it takes to apply the mask to the image
-        clock_t        startTime   = clock();
-        unsigned char* result_img  = applyMask(gray_img, width, height, gray_channels, mask, size_mask, &argc, argv);
-        clock_t        elapsedTime = clock() - startTime;
+        int initial, ending;
+
+        rows = img_size / numworkers;
+        initial = 0;
+        ending = (initial + rows - 1);
+
+        printf("sending!\n");
+
+        for (dest = 1; dest <= numworkers; dest++)
+        {
+            MPI_Send(&width, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+            MPI_Send(&height, 1, MPI_INT, dest, 1, MPI_COMM_WORLD);
+            MPI_Send(&initial, 1, MPI_INT, dest, 2, MPI_COMM_WORLD);
+            MPI_Send(&ending, 1, MPI_INT, dest, 3, MPI_COMM_WORLD);
+            MPI_Send(&img_size, 1, MPI_INT, dest, 4, MPI_COMM_WORLD);
+            MPI_Send(img, img_size, MPI_UNSIGNED_CHAR, dest, 5, MPI_COMM_WORLD);
+            initial = (dest - 1) * rows;
+            ending = (initial + rows - 1);
+        }
+        printf("MASTER: info sent!\n");
+        printf("MASTER: img size: %d\n", img_size);
+        printf("MASTER: width %d height %d\n", width, height);
+        printf("MASTER: receiving results!\n");
+        int offset = 0;
+        for (dest = 1; dest <= numworkers; dest++)
+        {
+            printf("MASTER: receiving from: %d\n", dest);
+
+            MPI_Recv(&initial, 1, MPI_INT, dest, 0, MPI_COMM_WORLD, &status);
+            MPI_Recv(&ending, 1, MPI_INT, dest, 1, MPI_COMM_WORLD, &status);
+            printf("MASTER - %d: received offsets %d %d\n", dest, initial, ending);
+
+            int npixels = (ending - initial + 1);
+            unsigned char *img_chunk = (unsigned char *)malloc(npixels * sizeof(unsigned char));
+            printf("%d: result size %d\n", taskid, rows);
+            MPI_Recv(img_chunk, npixels, MPI_UNSIGNED_CHAR, dest, 2, MPI_COMM_WORLD, &status);
+            printf("MASTER: received from: %d\n", dest);
+
+            rebuild_img(img, img_chunk, initial, ending);
+
+            printf("MASTER: freeing chunk!\n");
+            free(img_chunk);
+        }
+        printf("received!\n");
 
         // Calculate time taken and output
-        double seconds = ((double)elapsedTime) / CLOCKS_PER_SEC;
-        // printf("Convolution for %s took: %.3f seconds.\n", inputPath, seconds);
-        printf("%.4f", seconds);
 
-        
-        stbi_image_free(gray_img);
-        stbi_write_jpg(output_location, width, height, gray_channels, result_img, 100);
-        stbi_image_free(result_img);
+        printf("writing img\n");
+        stbi_write_jpg(outputImg, width, height, 1, img, 100);
+        printf("freeing\n");
+        stbi_image_free(pre_img);
+        printf("MASTER: Freed pre_img!\n");
+        free(img);
+        printf("end!\n");
     }
-    
+    // good ol slave
+    if (taskid > 0)
+    {
+        int initial, ending;
+        int mask[9] = {-1, -1, -1, -1, 8, -1, -1, -1, -1};
+        source = 0;
 
+        // Receive parameters
+        MPI_Recv(&width, 1, MPI_INT, source, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(&height, 1, MPI_INT, source, 1, MPI_COMM_WORLD, &status);
+        MPI_Recv(&initial, 1, MPI_INT, source, 2, MPI_COMM_WORLD, &status);
+        MPI_Recv(&ending, 1, MPI_INT, source, 3, MPI_COMM_WORLD, &status);
+        MPI_Recv(&img_size, 1, MPI_INT, source, 4, MPI_COMM_WORLD, &status);
+
+        unsigned char *this_img = (unsigned char *)malloc(img_size * sizeof(unsigned char));
+        printf("%d: receiving img\n", taskid);
+        MPI_Recv(this_img, img_size, MPI_UNSIGNED_CHAR, source, 5, MPI_COMM_WORLD, &status);
+        printf("%d: received img\n", taskid);
+
+        int npixels = (ending - initial + 1);
+        printf("%d: img size: %d\n", taskid, img_size);
+        printf("%d: number of pixels: %d\n", taskid, npixels);
+
+        // Apply conv
+        unsigned char *img_chunk = (unsigned char *)malloc(npixels * sizeof(unsigned char));
+
+        int index = initial;
+
+        for (int k = initial; k < ending; k++)
+        {
+            size_t y = index / height;
+            size_t x = index % width;
+            int acc = 0;
+            for (int i = 0; i < 9; i++)
+            {
+                int mask_dim = 3;
+
+                if (x == 0 && y == 0)
+                {
+                }
+                else if (x == 0 && y == height - 1)
+                {
+                }
+                else if (x == width - 1 && y == 0)
+                {
+                }
+                else if (x == width - 1 && y == height - 1)
+                {
+                }
+                else if (x == 0)
+                {
+                }
+                else if (y == 0)
+                {
+                }
+                else if (x == width - 1)
+                {
+                }
+                else if (y == height - 1)
+                {
+                }
+                else
+                {
+                    size_t dy = (i / mask_dim) - (((mask_dim / 2) - 1) + (mask_dim % 2));
+                    size_t dx = (i % mask_dim) - (((mask_dim / 2) - 1) + (mask_dim % 2));
+
+                    uint32_t value = ((uint32_t)(this_img[k + dx + (dy * width)])) * mask[i];
+
+                    acc += value;
+                }
+            }
+            // Delimits the value for the pixel to black or white for edge detection
+            if (acc < 0)
+            {
+                acc = 0;
+            }
+            else if (acc > 255)
+            {
+                acc = 255;
+            }
+            img_chunk[k] = (unsigned char)acc;
+            index++;
+        }
+        printf("%d: sending results\n", taskid);
+        // Send results
+
+        MPI_Send(&initial, 1, MPI_INT, source, 0, MPI_COMM_WORLD);
+        MPI_Send(&ending, 1, MPI_INT, source, 1, MPI_COMM_WORLD);
+        printf("%d: sending img\n", taskid);
+        MPI_Send(img_chunk, npixels, MPI_UNSIGNED_CHAR, source, 2, MPI_COMM_WORLD);
+        printf("%d: results sent!\n", taskid);
+        free(this_img);
+        printf("%d: freed img!\n", taskid);
+        free(img_chunk);
+        printf("%d: finished all tasks!\n", taskid);
+    }
+
+    MPI_Finalize();
 
     return 0;
 }
-
