@@ -1,4 +1,4 @@
 #!/bin/bash
 
-gcc main.c -o convImage -lm
-./convImage
+mpicc main.c -o convImage
+mpirun -np 1 ./convImage

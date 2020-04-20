@@ -11,10 +11,10 @@ int mask[9] = {-1, -1, -1, -1, 8, -1, -1, -1, -1};
 
 
 // argc = argument count, argv = pointer to charstring containing argument
-int main(int argc, char** argv) {
+int main(int argc, char* argv[]) {
 
-    char inputPath[3][100]; // "img/originals/imageSmall.jpg";
-    char resultPath[3][100]; // "img/results/Sequential/resultsSmall.jpg";
+    char inputPath[3][100]; 
+    char resultPath[3][100];
 
     size_t image_count = 3;
 
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 
     // } else printf("Image Convolution in C\n\tArguments:\n\t\tinputPath outputPath\n");
 
-
+    // Apply convolution to each image
     for (size_t image = 0; image < image_count; image++) {
 
         // Load the input image
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 
         // Takes the time it takes to apply the mask to the image
         clock_t        startTime   = clock();
-        unsigned char* result_img  = applyMask(gray_img, width, height, gray_channels, mask, size_mask);
+        unsigned char* result_img  = applyMask(gray_img, width, height, gray_channels, mask, size_mask, &argc, argv);
         clock_t        elapsedTime = clock() - startTime;
 
         // Calculate time taken and output
