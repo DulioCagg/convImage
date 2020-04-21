@@ -20,9 +20,9 @@ void rebuild_img(unsigned char *img, unsigned char *chunk, int from, int to)
 int main(int argc, char *argv[])
 {
 
-    const char *img_name = "imageSmall";
-    const char *pathImg = "img/originals/imageSmall.jpg";
-    const char *outputImg = "img/results/imageSmall.jpg";
+    const char *img_name = "imageBig";
+    const char *pathImg = "img/originals/imageTestTest.jpg";
+    const char *outputImg = "img/results/imageBig.jpg";
 
     // MPI Shit
     int numtasks, taskid, numworkers, source, worker;
