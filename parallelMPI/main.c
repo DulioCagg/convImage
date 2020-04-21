@@ -10,7 +10,7 @@ unsigned char *result_img;
 
 void rebuild_img(unsigned char *img, unsigned char *chunk, int from, int to)
 {
-    printf("Rebuild: from %d to %d\n", from, to);
+    // printf("Rebuild: from %d to %d\n", from, to);
     for (int i = from, j = 0; i <= to; i++, j++)
     {
         img[i] = chunk[j];
@@ -20,8 +20,9 @@ void rebuild_img(unsigned char *img, unsigned char *chunk, int from, int to)
 int main(int argc, char *argv[])
 {
 
-    const char *pathImg = "img/originals/imageTestTest.jpg";
-    const char *outputImg = "img/results/imageTestTest.jpg";
+    const char *img_name = "imageSmall";
+    const char *pathImg = "img/originals/imageSmall.jpg";
+    const char *outputImg = "img/results/imageSmall.jpg";
 
     // MPI Shit
     int numtasks, taskid, numworkers, source, worker;
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
 
         pixels_per_worker = (int) (width * height) / numworkers;
 
-        printf("sending!\n");
+        // printf("sending!\n");
 
         double start = MPI_Wtime();
 
@@ -68,39 +69,38 @@ int main(int argc, char *argv[])
             MPI_Send(&ending, 1, MPI_INT, worker, 3, MPI_COMM_WORLD);
             MPI_Send(img, (width * height), MPI_UNSIGNED_CHAR, worker, 4, MPI_COMM_WORLD);
         }
-        printf("MASTER: info sent!\n");
-        printf("MASTER: receiving results!\n");
+        // printf("MASTER: info sent!\n");
+        // printf("MASTER: receiving results!\n");
         int offset = 0;
         for (worker = 1; worker <= numworkers; worker++)
         {
-            printf("MASTER: receiving from: %d\n", worker);
+            // printf("MASTER: receiving from: %d\n", worker);
 
             MPI_Recv(&initial, 1, MPI_INT, worker, 0, MPI_COMM_WORLD, &status);
             MPI_Recv(&ending, 1, MPI_INT, worker, 1, MPI_COMM_WORLD, &status);
-            printf("MASTER - %d: received offsets %d %d\n", worker, initial, ending);
+            // printf("MASTER - %d: received offsets %d %d\n", worker, initial, ending);
 
             int npixels = (ending - initial + 1);
             unsigned char *img_chunk = (unsigned char *)malloc(npixels * sizeof(unsigned char));
-            printf("%d: result size %d\n", taskid, npixels);
+            // printf("%d: result size %d\n", taskid, npixels);
             MPI_Recv(img_chunk, npixels, MPI_UNSIGNED_CHAR, worker, 2, MPI_COMM_WORLD, &status);
-            printf("MASTER: received from: %d\n", worker);
+            // printf("MASTER: received from: %d\n", worker);
 
             rebuild_img(result_img, img_chunk, initial, ending);
 
-            printf("MASTER: freeing chunk!\n");
+            // printf("MASTER: freeing chunk!\n");
             free(img_chunk);
         }
+        
         double end = MPI_Wtime();
-        printf("Finished convolution!, time elapsed: %lf\n", end - start);
+
+        printf("%s, %d, %lf\n", img_name, numtasks, end - start);
 
         // Calculate time taken and output
 
-        printf("writing img\n");
         stbi_write_jpg(outputImg, width, height, 1, result_img, 100);
-        printf("freeing\n");
         stbi_image_free(img);
         free(result_img);
-        printf("Freed resources!\n");
     }
     // good ol slave
     if (taskid > 0)
@@ -122,13 +122,13 @@ int main(int argc, char *argv[])
 
         int npixels = (ending - initial + 1);
 
-        printf("%d: img size: %d\n", taskid, (width * height));
-        printf("%d: initial: %d ending: %d\n", taskid, initial, ending);
-        printf("%d: number of pixels: %d\n", taskid, npixels);
+        // printf("%d: img size: %d\n", taskid, (width * height));
+        // printf("%d: initial: %d ending: %d\n", taskid, initial, ending);
+        // printf("%d: number of pixels: %d\n", taskid, npixels);
 
         // Apply conv
         unsigned char *img_chunk = (unsigned char *)malloc(npixels * sizeof(unsigned char));
-        printf("%d: malloc size: %ld\n", taskid, npixels * sizeof(unsigned char));
+        // printf("%d: malloc size: %ld\n", taskid, npixels * sizeof(unsigned char));
 
         int index = 0;
         for (int k = initial, i = 1; k < ending; k++, i++)
@@ -190,18 +190,18 @@ int main(int argc, char *argv[])
             img_chunk[index] = (unsigned char)acc;
             index++;
         }
-        printf("%d: sending results\n", taskid);
+        // printf("%d: sending results\n", taskid);
         // Send results
 
         MPI_Send(&initial, 1, MPI_INT, source, 0, MPI_COMM_WORLD);
         MPI_Send(&ending, 1, MPI_INT, source, 1, MPI_COMM_WORLD);
-        printf("%d: sending img\n", taskid);
+        // printf("%d: sending img\n", taskid);
         MPI_Send(img_chunk, npixels, MPI_UNSIGNED_CHAR, source, 2, MPI_COMM_WORLD);
-        printf("%d: results sent!\n", taskid);
+        // printf("%d: results sent!\n", taskid);
         free(this_img);
-        printf("%d: freed img!\n", taskid);
+        // printf("%d: freed img!\n", taskid);
         free(img_chunk);
-        printf("%d: finished all tasks!\n", taskid);
+        // printf("%d: finished all tasks!\n", taskid);
     }
 
     MPI_Finalize();
