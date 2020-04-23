@@ -121,11 +121,8 @@ int main(int argc, char *argv[])
 
         // Apply conv
         int index = 0;
-        for (int k = initial, i = 1; k < ending; k++, i++)
+        for (int k = initial; k < ending; k++)
         {
-            if (taskid == 2)
-            {
-            }
             size_t y = k / height;
             size_t x = k % width;
             int acc = 0;
